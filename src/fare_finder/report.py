@@ -22,6 +22,14 @@ def _day(d: date, weekday: bool = True) -> str:
     return f"{d:%a %b} {d.day}" if weekday else f"{d:%b} {d.day}"  # portable: no %-d on Windows
 
 
+def _vs_last(r: TripResult) -> str:
+    if r.prev_price is None:
+        return "new"
+    if r.lowest_price == r.prev_price:
+        return "same"
+    return f"was ${r.prev_price} ({r.change_pct:+.0f}%)"
+
+
 def _span(r: TripResult) -> str:
     return f"{_day(r.trip.depart)} – {_day(r.trip.return_date)}"
 
@@ -50,6 +58,7 @@ def render_text(results: list[TripResult], config: Config, provider_name: str, t
         if not route_results:
             continue
         has_ground = bool(route.ground)
+        has_history = any(r.prior_count for r in route_results)
         dest_label = route.ground_to or route.name
         parts.append("")
         parts.append(f"{route.name}: {', '.join(route.destinations)} · deal target ${route.target_price}")
@@ -79,7 +88,11 @@ def render_text(results: list[TripResult], config: Config, provider_name: str, t
                 if has_ground:
                     ground = f"{r.ground_minutes}m, ${r.ground_cost} each way" if r.ground_cost is not None else "—"
                     row[4:4] = [ground, _money(r.door_to_door)]
+                if has_history:
+                    row.append(_vs_last(r))
                 rows.append(row)
+            if has_history:
+                headers.append("vs last scan")
             parts.append(_table(headers, rows))
         else:
             cheapest = min(route_results, key=lambda r: r.lowest_price)
@@ -87,6 +100,22 @@ def render_text(results: list[TripResult], config: Config, provider_name: str, t
                 f"No deals at or below ${route.target_price} yet. Cheapest: {_money(cheapest.lowest_price)} "
                 f"{cheapest.trip.pattern} {_span(cheapest)} into {cheapest.trip.destination}."
             )
+
+        # Biggest moves since the last scan
+        if has_history:
+            moved = [r for r in route_results if r.change_pct is not None and r.lowest_price != r.prev_price]
+            drops = sorted((r for r in moved if r.change_pct < 0), key=lambda r: r.change_pct)[:5]
+            parts.append("")
+            if drops:
+                parts.append("Biggest drops since the last scan:")
+                for r in drops:
+                    low = " · lowest seen" if r.lowest_price <= (r.prior_low or 0) else ""
+                    parts.append(
+                        f"  {_money(r.lowest_price)} {r.trip.pattern} {_span(r)} {r.trip.destination}: {_vs_last(r)}{low}"
+                    )
+            else:
+                rises = sum(1 for r in moved if r.change_pct > 0)
+                parts.append(f"No fares dropped since the last scan ({rises} went up).")
 
         # 2. Weekend grid: cheapest airport per weekend x pattern
         best = best_per_weekend_pattern(route_results)

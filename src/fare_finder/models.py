@@ -46,7 +46,19 @@ class TripResult:
     is_deal: bool = False
     ground_minutes: int | None = None       # airport to destination, one way
     ground_cost: int | None = None          # airport to destination, one way
+    # Price history for this exact trip from earlier scans (filled in by history.annotate)
+    prev_price: int | None = None           # last scan's lowest fare
+    prior_low: int | None = None            # lowest fare ever seen
+    prior_median: int | None = None
+    prior_count: int = 0
     error: str | None = None
+
+    @property
+    def change_pct(self) -> float | None:
+        """Change in the lowest fare since the last scan, in percent (negative = cheaper)."""
+        if self.lowest is None or not self.prev_price:
+            return None
+        return (self.lowest.price - self.prev_price) / self.prev_price * 100
 
     @property
     def lowest_price(self) -> int | None:

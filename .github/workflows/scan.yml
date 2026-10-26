@@ -9,10 +9,22 @@ on:
   schedule:
     - cron: "37 13 * * 1"     # Mondays 13:37 UTC = 7:37 AM Central (CST)
 
+concurrency:
+  group: fare-scan       # never run two scans at once (they'd both alert)
+  cancel-in-progress: false
+
 jobs:
   scan:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      # Repository secrets (Settings → Secrets and variables → Actions).
+      # Missing secrets just switch the matching feature off.
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      SMTP_USER: ${{ secrets.SMTP_USER }}
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
     steps:
       - uses: actions/checkout@v4
 
