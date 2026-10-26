@@ -1,0 +1,36 @@
+# Fare Finder configuration.
+# Every route is searched for the next `weekends_ahead` weekends, in every
+# pattern, at every destination airport, American nonstops only.
+
+origin: DFW
+airline: AA            # IATA code; only this airline's nonstops are kept
+weekends_ahead: 12     # how many upcoming weekends to scan
+min_days_out: 3        # skip weekends departing sooner than this
+
+# Trip patterns: depart on `depart`, return `nights` later.
+patterns:
+  - name: Fri-Sun
+    depart: Friday
+    nights: 2
+  - name: Thu-Mon
+    depart: Thursday
+    nights: 4
+  - name: Sat-Tue
+    depart: Saturday
+    nights: 3
+
+routes:
+  - name: NYC
+    destinations: [LGA, JFK, EWR]
+    target_price: 260          # alert when a round-trip AA nonstop is at or below this (USD)
+    blackout_dates: []         # departure dates to skip, e.g. ["2027-02-12"]
+
+# Loyalty Points estimate for a Main Cabin ticket:
+#   (Main Cabin price - taxes) x lp_per_dollar
+loyalty:
+  lp_per_dollar: 5             # 7 once AAdvantage Gold
+  taxes_estimate: 45           # domestic round-trip taxes and fees (USD), approximate
+  main_cabin_gap_default: 60   # used only if the Main Cabin search returns nothing
+
+alerts:
+  drop_percent: 15             # also flag fares that fell this much since the last run (phase 2)

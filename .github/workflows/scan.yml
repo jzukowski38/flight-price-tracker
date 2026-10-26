@@ -1,0 +1,42 @@
+name: Weekend fare scan
+
+on:
+  workflow_dispatch:          # "Run workflow" button on the Actions tab
+    inputs:
+      weekends:
+        description: "Weekends to scan"
+        default: "12"
+  schedule:
+    - cron: "37 13 * * 1"     # Mondays 13:37 UTC = 7:37 AM Central (CST)
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: pip install .
+
+      - name: Scan
+        shell: bash   # adds pipefail, so a failed scan fails the job despite `tee`
+        run: |
+          fare-finder scan --weekends "${{ github.event.inputs.weekends || '12' }}" \
+            --csv output/fares.csv --json output/fares.json | tee output.txt
+          {
+            echo '```'
+            cat output.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fares-${{ github.run_number }}
+          path: output/
+          retention-days: 90
