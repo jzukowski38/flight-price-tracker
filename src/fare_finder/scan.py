@@ -10,11 +10,19 @@ from .models import FareOption, Trip, TripResult
 from .providers.base import FareProvider, ProviderError
 
 
-MAIN_CABIN_ATTEMPTS = 2
+ATTEMPTS_WHEN_EMPTY = 2
 
 
 def _cheapest(options: Iterable[FareOption]) -> FareOption | None:
     return min(options, key=lambda o: o.price, default=None)
+
+
+def _search(provider: FareProvider, trip: Trip, airline: str, exclude_basic_economy: bool) -> FareOption | None:
+    for _ in range(ATTEMPTS_WHEN_EMPTY):
+        best = _cheapest(provider.search(trip, airline, exclude_basic_economy=exclude_basic_economy))
+        if best is not None:
+            return best
+    return None
 
 
 def price_trip(trip: Trip, provider: FareProvider, config: Config) -> TripResult:
@@ -24,15 +32,12 @@ def price_trip(trip: Trip, provider: FareProvider, config: Config) -> TripResult
     if ground:
         result.ground_minutes, result.ground_cost = ground.minutes, ground.cost
     try:
-        result.lowest = _cheapest(provider.search(trip, config.airline, exclude_basic_economy=False))
+        # Google sometimes answers "no flights" for a trip that has them, then
+        # finds them a moment later, so an empty result gets one more try.
+        result.lowest = _search(provider, trip, config.airline, exclude_basic_economy=False)
         if result.lowest is None:
             return result  # no nonstop availability: skip the second search
-        # The lowest-fare search found nonstops, so an empty Main Cabin search is
-        # almost always a transient Google hiccup: try once more before giving up.
-        for _ in range(MAIN_CABIN_ATTEMPTS):
-            result.main_cabin = _cheapest(provider.search(trip, config.airline, exclude_basic_economy=True))
-            if result.main_cabin is not None:
-                break
+        result.main_cabin = _search(provider, trip, config.airline, exclude_basic_economy=True)
     except ProviderError as exc:
         result.error = str(exc)
         if result.lowest is None:

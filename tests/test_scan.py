@@ -74,10 +74,24 @@ def test_failed_main_cabin_search_keeps_lowest_and_reports_error():
     assert r.lowest_price == 300 and r.main_cabin_unknown and r.error == "blocked"
 
 
-def test_no_nonstop_skips_second_search():
+def test_no_nonstop_retries_once_then_skips_main_cabin_search():
     provider = FakeProvider(lowest=[])
     r = price_trip(TRIP, provider, CONFIG)
-    assert r.lowest is None and provider.calls == [False]
+    assert r.lowest is None and provider.calls == [False, False]
+
+
+def test_lowest_fare_retry_recovers_from_a_transient_empty_result():
+    class FlakyLowest(FakeProvider):
+        def search(self, trip, airline, exclude_basic_economy):
+            self.calls.append(exclude_basic_economy)
+            if self.calls == [False]:
+                return []  # first search: Google hiccup
+            return [fare(405 if exclude_basic_economy else 295)]
+
+    provider = FlakyLowest(lowest=[])
+    r = price_trip(TRIP, provider, CONFIG)
+    assert (r.lowest_price, r.main_cabin_price) == (295, 405)
+    assert provider.calls == [False, False, True]
 
 
 def test_sample_scan_end_to_end():

@@ -172,7 +172,7 @@ def render_text(results: list[TripResult], config: Config, provider_name: str, t
     parts.append("")
     parts.append(
         f"{len(results)} trips · {len(priced)} priced · "
-        f"{len(results) - len(priced) - len(errors)} with no AA nonstop · {len(errors)} errors"
+        f"{len(results) - len(priced) - len(errors)} with no AA nonstop found · {len(errors)} errors"
     )
     if errors:
         parts.append("First error: " + errors[0].error)
