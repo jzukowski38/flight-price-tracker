@@ -61,7 +61,7 @@ def render_text(results: list[TripResult], config: Config, provider_name: str, t
         has_history = any(r.prior_count for r in route_results)
         dest_label = route.ground_to or route.name
         parts.append("")
-        parts.append(f"{route.name}: {', '.join(route.destinations)} · deal target ${route.target_price}")
+        parts.append(f"{route.name}: {', '.join(route.destinations)} · deal: {route.target_label}")
 
         # 1. Deals (fare at or below target), cheapest door-to-door first
         deals = sorted(
@@ -69,7 +69,7 @@ def render_text(results: list[TripResult], config: Config, provider_name: str, t
         )
         parts.append("")
         if deals:
-            parts.append(f"Deals at or below ${route.target_price}:")
+            parts.append(f"Deals at or below {route.target_label}:")
             headers = ["Dates", "Pattern", "Airport", "Lowest", "Main Cabin", "Gap", "Est. LP", "Outbound"]
             if has_ground:
                 headers[4:4] = [f"To {dest_label}", "Door-to-door"]
@@ -97,7 +97,7 @@ def render_text(results: list[TripResult], config: Config, provider_name: str, t
         else:
             cheapest = min(route_results, key=lambda r: r.lowest_price)
             parts.append(
-                f"No deals at or below ${route.target_price} yet. Cheapest: {_money(cheapest.lowest_price)} "
+                f"No deals at or below {route.target_label} yet. Cheapest: {_money(cheapest.lowest_price)} "
                 f"{cheapest.trip.pattern} {_span(cheapest)} into {cheapest.trip.destination}."
             )
 

@@ -115,3 +115,15 @@ def test_ground_airport_must_be_a_destination():
     raw = {**RAW, "routes": [{**RAW["routes"][0], "ground": {"BOS": {"minutes": 10, "cost": 5}}}]}
     with pytest.raises(ConfigError):
         parse_config(raw)
+
+
+def test_main_cabin_target_makes_a_deal_only_when_measured():
+    raw = {**RAW, "routes": [{**RAW["routes"][0], "target_price": 299, "main_cabin_target": 399}]}
+    config = parse_config(raw)
+    r = price_trip(TRIP, FakeProvider(lowest=[320], main=[395]), config)
+    assert (r.deal_basic, r.deal_main, r.is_deal) == (False, True, True)
+    r = price_trip(TRIP, FakeProvider(lowest=[298], main=[420]), config)
+    assert (r.deal_basic, r.deal_main) == (True, False)
+    r = price_trip(TRIP, FakeProvider(lowest=[320], main=[]), config)  # estimated 380: not trusted
+    assert r.gap_estimated and not r.is_deal
+    assert config.routes[0].target_label == "$299 (any fare) or $399 (Main Cabin)"

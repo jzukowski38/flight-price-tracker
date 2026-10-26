@@ -38,7 +38,12 @@ def price_trip(trip: Trip, provider: FareProvider, config: Config) -> TripResult
 
     result.gap = result.main_cabin_price - result.lowest.price
     result.lp_estimate = estimate_loyalty_points(result.main_cabin_price, config.loyalty)
-    result.is_deal = route.target_price > 0 and result.lowest.price <= route.target_price
+    result.deal_basic = route.target_price > 0 and result.lowest.price <= route.target_price
+    result.deal_main = (
+        route.main_cabin_target > 0
+        and not result.gap_estimated  # only a measured Main Cabin price counts
+        and result.main_cabin_price <= route.main_cabin_target
+    )
     return result
 
 

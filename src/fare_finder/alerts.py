@@ -1,7 +1,8 @@
 """Decide which fares are worth an email, and send it.
 
 Rules (per trip = route + pattern + departure date + airport):
-  deal  — lowest fare is at or below the route's target price
+  deal  — lowest fare is at or below the route's target_price, or the measured
+          Main Cabin price is at or below main_cabin_target
   drop  — lowest fare fell at least `drop_percent` since the last scan
 A trip is emailed again only if its fare is at least $10 below the last fare
 we emailed for it, so a deal that sits there for weeks is sent once.
@@ -92,7 +93,7 @@ def build_email(alerts: list[Alert], config: Config, run_url: str | None = None)
 
     body = []
     if deals:
-        targets = ", ".join(f"{r.name} ${r.target_price}" for r in config.routes)
+        targets = "; ".join(f"{r.name} {r.target_label}" for r in config.routes)
         body.append(f"At or below your target ({targets}):")
         body.extend(_line(a) for a in deals)
         body.append("")

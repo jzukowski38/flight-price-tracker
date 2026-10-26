@@ -11,7 +11,7 @@ The difference is the real Main Cabin gap for that weekend. Each result also sho
 
 ## Run it
 
-**On GitHub (no install):** Actions tab → *Weekend fare scan* → *Run workflow*. The results appear in the run's summary, and the CSV/JSON are attached as an artifact. It also runs every Monday morning.
+**On GitHub (no install):** Actions tab → *Weekend fare scan* → *Run workflow*. The results appear in the run's summary, and the CSV/JSON are attached as an artifact. It also runs every Monday and Thursday morning.
 
 **Locally:**
 
@@ -30,12 +30,28 @@ A full scan is 108 trips × 2 searches. Searches are spaced 2 seconds apart (`--
 
 ## Reading the output
 
-- **Deals** — every trip at or below the route's `target_price`.
+- **Deals** — every trip under $300 for the cheapest fare (`target_price`) or under $400 for Main Cabin (`main_cabin_target`).
 - **Weekend grid** — cheapest airport for each weekend × pattern. `*` marks a deal.
 - **Lowest** is the cheapest AA nonstop round trip; **Main Cabin** is the cheapest with Basic excluded; **Gap** is the difference. A `~` means the Main Cabin search came back empty and the default gap was used.
 - **Est. LP** = (Main Cabin price − ~$45 taxes) × 5, rounded. Change `lp_per_dollar` to 7 once you're Gold.
 
 Prices come from Google Flights and usually match aa.com within a few dollars. Always confirm on aa.com before booking: cached availability can show a fare that has just sold out.
+
+## Price history and email alerts
+
+Every live run is saved to Supabase (`fare_observations`), so each fare is compared with earlier scans of the same trip ("was $340, −16%"). You get an email when a fare becomes a deal or drops 15%+ since the last scan; the same trip is only emailed again if it gets at least $10 cheaper.
+
+Both are switched on by repository secrets (Settings → Secrets and variables → Actions):
+
+| Secret | What |
+| --- | --- |
+| `SUPABASE_URL` | `https://<project-ref>.supabase.co` |
+| `SUPABASE_SECRET_KEY` | the project's **secret** key (Project Settings → API Keys) |
+| `SMTP_USER` | your Gmail address |
+| `SMTP_PASSWORD` | a Gmail [app password](https://myaccount.google.com/apppasswords) (needs 2-Step Verification) |
+| `ALERT_EMAIL_TO` | optional; defaults to `SMTP_USER` |
+
+Missing secrets just turn the feature off. The tables are created by `supabase/migrations/`. Preview the email without sending: `fare-finder scan --email print`.
 
 ## Configure
 
@@ -67,7 +83,7 @@ src/fare_finder/
 
 ## Roadmap
 
-1. **MVP** (this) — local and GitHub Actions scans, text report, CSV.
-2. **History** — store each run in Supabase, score weekends against their own price history, alert on drops.
+1. **MVP** — local and GitHub Actions scans, text report, CSV. ✅
+2. **History and alerts** — Supabase price history, email on deals and drops. ✅
 3. **More routes** — Pittsburgh, Phoenix, Boston, Nashville, South Carolina via config.
 4. **Status tracking** — Loyalty Points per booked trip against the 40,000 needed for Gold.

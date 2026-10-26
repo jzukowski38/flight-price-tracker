@@ -40,8 +40,16 @@ class Route:
     destinations: tuple[str, ...]
     target_price: int
     blackout_dates: frozenset[date] = frozenset()
+    main_cabin_target: int = 0  # 0 = no Main Cabin target
     ground_to: str | None = None
     ground: tuple[tuple[str, Ground], ...] = ()  # (airport, Ground) pairs; tuple keeps it hashable
+
+    @property
+    def target_label(self) -> str:
+        label = f"${self.target_price}"
+        if self.main_cabin_target:
+            label += f" (any fare) or ${self.main_cabin_target} (Main Cabin)"
+        return label
 
     def ground_for(self, airport: str) -> Ground | None:
         for code, g in self.ground:
@@ -120,6 +128,7 @@ def parse_config(raw: dict) -> Config:
                 destinations=dests,
                 target_price=int(r.get("target_price", 0)),
                 blackout_dates=blackouts,
+                main_cabin_target=int(r.get("main_cabin_target", 0)),
                 ground_to=r.get("ground_to"),
                 ground=tuple(ground),
             )

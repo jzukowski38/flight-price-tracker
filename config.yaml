@@ -22,7 +22,8 @@ patterns:
 routes:
   - name: NYC
     destinations: [LGA, JFK, EWR]
-    target_price: 260          # alert when a round-trip AA nonstop is at or below this (USD)
+    target_price: 299          # deal: lowest AA nonstop round trip (usually Basic) at or below this — "under $300"
+    main_cabin_target: 399     # also a deal: Main Cabin at or below this — "under $400"
     blackout_dates: []         # departure dates to skip, e.g. ["2027-02-12"]
     # Getting from each airport to where you're staying, ONE WAY. Rough
     # rideshare/taxi estimates to the West Village outside rush hour — edit to

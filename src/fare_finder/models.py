@@ -43,7 +43,8 @@ class TripResult:
     gap: int | None = None
     gap_estimated: bool = False
     lp_estimate: int | None = None
-    is_deal: bool = False
+    deal_basic: bool = False                # lowest fare at or below the route's target_price
+    deal_main: bool = False                 # measured Main Cabin price at or below main_cabin_target
     ground_minutes: int | None = None       # airport to destination, one way
     ground_cost: int | None = None          # airport to destination, one way
     # Price history for this exact trip from earlier scans (filled in by history.annotate)
@@ -59,6 +60,14 @@ class TripResult:
         if self.lowest is None or not self.prev_price:
             return None
         return (self.lowest.price - self.prev_price) / self.prev_price * 100
+
+    @property
+    def is_deal(self) -> bool:
+        return self.deal_basic or self.deal_main
+
+    @is_deal.setter
+    def is_deal(self, value: bool) -> None:  # convenience for tests: a plain fare deal
+        self.deal_basic = value
 
     @property
     def lowest_price(self) -> int | None:
