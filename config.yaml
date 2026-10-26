@@ -41,7 +41,6 @@ routes:
 loyalty:
   lp_per_dollar: 5             # 7 once AAdvantage Gold
   taxes_estimate: 45           # domestic round-trip taxes and fees (USD), approximate
-  main_cabin_gap_default: 60   # used only if the Main Cabin search returns nothing
 
 alerts:
   drop_percent: 15             # also flag fares that fell this much since the last run (phase 2)

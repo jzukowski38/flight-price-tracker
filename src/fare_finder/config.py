@@ -62,7 +62,6 @@ class Route:
 class LoyaltyConfig:
     lp_per_dollar: float = 5
     taxes_estimate: float = 45
-    main_cabin_gap_default: int = 60
 
 
 @dataclass(frozen=True)
@@ -140,7 +139,6 @@ def parse_config(raw: dict) -> Config:
     loyalty = LoyaltyConfig(
         lp_per_dollar=float(loyalty_raw.get("lp_per_dollar", 5)),
         taxes_estimate=float(loyalty_raw.get("taxes_estimate", 45)),
-        main_cabin_gap_default=int(loyalty_raw.get("main_cabin_gap_default", 60)),
     )
 
     weekends = int(raw.get("weekends_ahead", 12))

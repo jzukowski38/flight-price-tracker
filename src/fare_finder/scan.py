@@ -10,6 +10,9 @@ from .models import FareOption, Trip, TripResult
 from .providers.base import FareProvider, ProviderError
 
 
+MAIN_CABIN_ATTEMPTS = 2
+
+
 def _cheapest(options: Iterable[FareOption]) -> FareOption | None:
     return min(options, key=lambda o: o.price, default=None)
 
@@ -24,26 +27,29 @@ def price_trip(trip: Trip, provider: FareProvider, config: Config) -> TripResult
         result.lowest = _cheapest(provider.search(trip, config.airline, exclude_basic_economy=False))
         if result.lowest is None:
             return result  # no nonstop availability: skip the second search
-        result.main_cabin = _cheapest(provider.search(trip, config.airline, exclude_basic_economy=True))
+        # The lowest-fare search found nonstops, so an empty Main Cabin search is
+        # almost always a transient Google hiccup: try once more before giving up.
+        for _ in range(MAIN_CABIN_ATTEMPTS):
+            result.main_cabin = _cheapest(provider.search(trip, config.airline, exclude_basic_economy=True))
+            if result.main_cabin is not None:
+                break
     except ProviderError as exc:
         result.error = str(exc)
         if result.lowest is None:
             return result
 
-    if result.main_cabin is not None:
-        result.main_cabin_price = max(result.main_cabin.price, result.lowest.price)
-    else:
-        result.main_cabin_price = result.lowest.price + config.loyalty.main_cabin_gap_default
-        result.gap_estimated = True
+    result.deal_basic = route.target_price > 0 and result.lowest.price <= route.target_price
 
+    if result.main_cabin is None:
+        # Never guess: a default gap can be off by hundreds (a $60 guess once
+        # stood in for a real $324 gap). Show it as unknown instead.
+        result.main_cabin_unknown = True
+        return result
+
+    result.main_cabin_price = max(result.main_cabin.price, result.lowest.price)
     result.gap = result.main_cabin_price - result.lowest.price
     result.lp_estimate = estimate_loyalty_points(result.main_cabin_price, config.loyalty)
-    result.deal_basic = route.target_price > 0 and result.lowest.price <= route.target_price
-    result.deal_main = (
-        route.main_cabin_target > 0
-        and not result.gap_estimated  # only a measured Main Cabin price counts
-        and result.main_cabin_price <= route.main_cabin_target
-    )
+    result.deal_main = route.main_cabin_target > 0 and result.main_cabin_price <= route.main_cabin_target
     return result
 
 

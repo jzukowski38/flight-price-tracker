@@ -74,7 +74,9 @@ def _line(a: Alert) -> str:
     if r.prev_price is not None and r.prev_price != r.lowest_price:
         parts.append(f"was ${r.prev_price} last scan ({r.change_pct:+.0f}%)")
     if r.main_cabin_price is not None:
-        parts.append(f"Main Cabin ${r.main_cabin_price}{' (est.)' if r.gap_estimated else ''}, ~{r.lp_estimate:,} LP")
+        parts.append(f"Main Cabin ${r.main_cabin_price}, ~{r.lp_estimate:,} LP")
+    elif r.main_cabin_unknown:
+        parts.append("Main Cabin price unavailable — check aa.com")
     if r.ground_cost:
         parts.append(f"${r.door_to_door} door-to-door")
     return "  • " + " · ".join(parts)

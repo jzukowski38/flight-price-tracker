@@ -12,10 +12,10 @@ from .models import TripResult
 from .scan import best_per_weekend_pattern
 
 
-def _money(v: int | None, estimated: bool = False) -> str:
+def _money(v: int | None, unknown: bool = False) -> str:
     if v is None:
-        return "—"
-    return f"${v}{'~' if estimated else ''}"
+        return "?" if unknown else "—"
+    return f"${v}"
 
 
 def _day(d: date, weekday: bool = True) -> str:
@@ -80,8 +80,8 @@ def render_text(results: list[TripResult], config: Config, provider_name: str, t
                     r.trip.pattern,
                     r.trip.destination,
                     _money(r.lowest_price),
-                    _money(r.main_cabin_price, r.gap_estimated),
-                    _money(r.gap, r.gap_estimated),
+                    _money(r.main_cabin_price, r.main_cabin_unknown),
+                    _money(r.gap, r.main_cabin_unknown),
                     f"{r.lp_estimate:,}" if r.lp_estimate else "—",
                     f"{r.lowest.depart_time}→{r.lowest.arrive_time}",
                 ]
@@ -159,14 +159,14 @@ def render_text(results: list[TripResult], config: Config, provider_name: str, t
             parts.extend(lines)
 
         # 3. Main Cabin gap summary
-        gaps = [r.gap for r in route_results if r.gap is not None and not r.gap_estimated]
+        gaps = [r.gap for r in route_results if r.gap is not None]
         if gaps:
             gaps.sort()
             median = gaps[len(gaps) // 2]
             parts.append("")
             parts.append(
                 f"Main Cabin gap over Basic: median ${median}, range ${gaps[0]}–${gaps[-1]} "
-                f"({len(gaps)} trips measured). '~' marks an estimated gap."
+                f"({len(gaps)} trips measured). '?' = Main Cabin price unavailable this scan."
             )
 
     parts.append("")
@@ -181,7 +181,7 @@ def render_text(results: list[TripResult], config: Config, provider_name: str, t
 
 FIELDS = [
     "route", "pattern", "weekend", "depart", "return", "airport",
-    "lowest_price", "main_cabin_price", "gap", "gap_estimated", "lp_estimate", "is_deal",
+    "lowest_price", "main_cabin_price", "gap", "main_cabin_unknown", "lp_estimate", "is_deal",
     "ground_minutes", "ground_cost", "door_to_door",
     "outbound_depart", "outbound_arrive", "error",
 ]
@@ -202,7 +202,7 @@ def to_rows(results: list[TripResult]) -> list[dict]:
                 "lowest_price": r.lowest_price,
                 "main_cabin_price": r.main_cabin_price,
                 "gap": r.gap,
-                "gap_estimated": r.gap_estimated,
+                "main_cabin_unknown": r.main_cabin_unknown,
                 "lp_estimate": r.lp_estimate,
                 "is_deal": r.is_deal,
                 "ground_minutes": r.ground_minutes,

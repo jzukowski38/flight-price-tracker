@@ -39,9 +39,9 @@ class TripResult:
     trip: Trip
     lowest: FareOption | None = None        # cheapest AA nonstop, usually Basic Economy
     main_cabin: FareOption | None = None    # cheapest AA nonstop with Basic Economy excluded
-    main_cabin_price: int | None = None     # main_cabin.price, or lowest + default gap if that search came back empty
+    main_cabin_price: int | None = None     # None when the Main Cabin search came back empty
     gap: int | None = None
-    gap_estimated: bool = False
+    main_cabin_unknown: bool = False        # Main Cabin search came back empty even after a retry
     lp_estimate: int | None = None
     deal_basic: bool = False                # lowest fare at or below the route's target_price
     deal_main: bool = False                 # measured Main Cabin price at or below main_cabin_target

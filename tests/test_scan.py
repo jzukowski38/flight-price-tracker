@@ -39,7 +39,7 @@ def test_measured_gap_and_loyalty_points():
     r = price_trip(TRIP, FakeProvider(lowest=[313, 340], main=[389, 420]), CONFIG)
     assert r.lowest_price == 313
     assert r.main_cabin_price == 389
-    assert r.gap == 76 and not r.gap_estimated
+    assert r.gap == 76 and not r.main_cabin_unknown
     assert r.lp_estimate == estimate_loyalty_points(389, CONFIG.loyalty) == 1720  # (389 - 45) x 5, nearest 10
     assert r.is_deal is False
 
@@ -49,15 +49,29 @@ def test_deal_flag_at_target():
     assert r.is_deal is True
 
 
-def test_empty_main_cabin_search_uses_default_gap():
-    r = price_trip(TRIP, FakeProvider(lowest=[300], main=[]), CONFIG)
-    assert r.gap_estimated is True
-    assert r.main_cabin_price == 300 + CONFIG.loyalty.main_cabin_gap_default
+def test_empty_main_cabin_search_is_retried_then_left_unknown():
+    provider = FakeProvider(lowest=[300], main=[])
+    r = price_trip(TRIP, provider, CONFIG)
+    assert provider.calls == [False, True, True]  # one retry
+    assert r.main_cabin_unknown and r.main_cabin_price is None and r.gap is None and r.lp_estimate is None
+    assert r.lowest_price == 300  # the fare itself still counts
+
+
+def test_main_cabin_retry_recovers_from_a_transient_empty_result():
+    class FlakyMain(FakeProvider):
+        def search(self, trip, airline, exclude_basic_economy):
+            self.calls.append(exclude_basic_economy)
+            if exclude_basic_economy and self.calls.count(True) == 1:
+                return []  # first Main Cabin search: Google hiccup
+            return [fare(619 if exclude_basic_economy else 295)]
+
+    r = price_trip(TRIP, FlakyMain(lowest=[]), CONFIG)
+    assert (r.lowest_price, r.main_cabin_price, r.gap, r.main_cabin_unknown) == (295, 619, 324, False)
 
 
 def test_failed_main_cabin_search_keeps_lowest_and_reports_error():
     r = price_trip(TRIP, FakeProvider(lowest=[300], fail_main=True), CONFIG)
-    assert r.lowest_price == 300 and r.gap_estimated and r.error == "blocked"
+    assert r.lowest_price == 300 and r.main_cabin_unknown and r.error == "blocked"
 
 
 def test_no_nonstop_skips_second_search():
@@ -124,6 +138,6 @@ def test_main_cabin_target_makes_a_deal_only_when_measured():
     assert (r.deal_basic, r.deal_main, r.is_deal) == (False, True, True)
     r = price_trip(TRIP, FakeProvider(lowest=[298], main=[420]), config)
     assert (r.deal_basic, r.deal_main) == (True, False)
-    r = price_trip(TRIP, FakeProvider(lowest=[320], main=[]), config)  # estimated 380: not trusted
-    assert r.gap_estimated and not r.is_deal
+    r = price_trip(TRIP, FakeProvider(lowest=[320], main=[]), config)  # unknown Main Cabin: never a Main deal
+    assert r.main_cabin_unknown and not r.is_deal
     assert config.routes[0].target_label == "$299 (any fare) or $399 (Main Cabin)"

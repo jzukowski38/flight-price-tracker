@@ -52,7 +52,7 @@ def observation_rows(results: list[TripResult], provider: str, run_id: str | Non
                 "lowest_price": r.lowest_price,
                 "main_cabin_price": r.main_cabin_price,
                 "gap": r.gap,
-                "gap_estimated": r.gap_estimated,
+                "main_cabin_unknown": r.main_cabin_unknown,
                 "lp_estimate": r.lp_estimate,
                 "ground_cost": r.ground_cost,
                 "door_to_door": r.door_to_door,

@@ -32,7 +32,7 @@ A full scan is 108 trips × 2 searches. Searches are spaced 2 seconds apart (`--
 
 - **Deals** — every trip under $300 for the cheapest fare (`target_price`) or under $400 for Main Cabin (`main_cabin_target`).
 - **Weekend grid** — cheapest airport for each weekend × pattern. `*` marks a deal.
-- **Lowest** is the cheapest AA nonstop round trip; **Main Cabin** is the cheapest with Basic excluded; **Gap** is the difference. A `~` means the Main Cabin search came back empty and the default gap was used.
+- **Lowest** is the cheapest AA nonstop round trip; **Main Cabin** is the cheapest with Basic excluded; **Gap** is the difference. A `?` means the Main Cabin search came back empty even after a retry; check aa.com for that trip.
 - **Est. LP** = (Main Cabin price − ~$45 taxes) × 5, rounded. Change `lp_per_dollar` to 7 once you're Gold.
 
 Prices come from Google Flights and usually match aa.com within a few dollars. Always confirm on aa.com before booking: cached availability can show a fare that has just sold out.
