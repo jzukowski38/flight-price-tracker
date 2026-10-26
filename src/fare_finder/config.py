@@ -27,11 +27,27 @@ class Pattern:
 
 
 @dataclass(frozen=True)
+class Ground:
+    """Getting from an airport to where you're staying, one way."""
+
+    minutes: int
+    cost: int
+
+
+@dataclass(frozen=True)
 class Route:
     name: str
     destinations: tuple[str, ...]
     target_price: int
     blackout_dates: frozenset[date] = frozenset()
+    ground_to: str | None = None
+    ground: tuple[tuple[str, Ground], ...] = ()  # (airport, Ground) pairs; tuple keeps it hashable
+
+    def ground_for(self, airport: str) -> Ground | None:
+        for code, g in self.ground:
+            if code == airport:
+                return g
+        return None
 
 
 @dataclass(frozen=True)
@@ -92,12 +108,20 @@ def parse_config(raw: dict) -> Config:
         if not dests:
             raise ConfigError(f"routes[{i}] needs at least one destination")
         blackouts = frozenset(date.fromisoformat(str(d)) for d in (r.get("blackout_dates") or []))
+        ground = []
+        for code, g in (r.get("ground") or {}).items():
+            code = _airport(code, f"routes[{i}].ground")
+            if code not in dests:
+                raise ConfigError(f"routes[{i}].ground: {code} is not one of this route's destinations")
+            ground.append((code, Ground(minutes=int(g.get("minutes", 0)), cost=int(g.get("cost", 0)))))
         routes.append(
             Route(
                 name=str(r.get("name") or "-".join(dests)),
                 destinations=dests,
                 target_price=int(r.get("target_price", 0)),
                 blackout_dates=blackouts,
+                ground_to=r.get("ground_to"),
+                ground=tuple(ground),
             )
         )
     if not routes:

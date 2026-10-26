@@ -44,8 +44,17 @@ class TripResult:
     gap_estimated: bool = False
     lp_estimate: int | None = None
     is_deal: bool = False
+    ground_minutes: int | None = None       # airport to destination, one way
+    ground_cost: int | None = None          # airport to destination, one way
     error: str | None = None
 
     @property
     def lowest_price(self) -> int | None:
         return self.lowest.price if self.lowest else None
+
+    @property
+    def door_to_door(self) -> int | None:
+        """Lowest fare plus ground transport both ways; the fare alone if no ground cost is configured."""
+        if self.lowest is None:
+            return None
+        return self.lowest.price + 2 * (self.ground_cost or 0)

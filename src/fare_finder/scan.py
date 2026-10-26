@@ -17,6 +17,9 @@ def _cheapest(options: Iterable[FareOption]) -> FareOption | None:
 def price_trip(trip: Trip, provider: FareProvider, config: Config) -> TripResult:
     route = config.route(trip.route)
     result = TripResult(trip=trip)
+    ground = route.ground_for(trip.destination)
+    if ground:
+        result.ground_minutes, result.ground_cost = ground.minutes, ground.cost
     try:
         result.lowest = _cheapest(provider.search(trip, config.airline, exclude_basic_economy=False))
         if result.lowest is None:
@@ -55,12 +58,13 @@ def run_scan(
 
 
 def best_per_weekend_pattern(results: list[TripResult]) -> dict[tuple, TripResult]:
-    """Cheapest airport for each (route, weekend, pattern)."""
+    """Best airport for each (route, weekend, pattern): lowest door-to-door cost, then lowest fare."""
     best: dict[tuple, TripResult] = {}
+    rank = lambda r: (r.door_to_door, r.lowest_price)
     for r in results:
         if r.lowest_price is None:
             continue
         k = (r.trip.route, r.trip.weekend, r.trip.pattern)
-        if k not in best or r.lowest_price < best[k].lowest_price:
+        if k not in best or rank(r) < rank(best[k]):
             best[k] = r
     return best

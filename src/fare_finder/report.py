@@ -49,32 +49,38 @@ def render_text(results: list[TripResult], config: Config, provider_name: str, t
         route_results = [r for r in priced if r.trip.route == route.name]
         if not route_results:
             continue
+        has_ground = bool(route.ground)
+        dest_label = route.ground_to or route.name
         parts.append("")
         parts.append(f"{route.name}: {', '.join(route.destinations)} · deal target ${route.target_price}")
 
-        # 1. Deals
-        deals = sorted((r for r in route_results if r.is_deal), key=lambda r: (r.lowest_price, r.trip.depart))
+        # 1. Deals (fare at or below target), cheapest door-to-door first
+        deals = sorted(
+            (r for r in route_results if r.is_deal), key=lambda r: (r.door_to_door, r.lowest_price, r.trip.depart)
+        )
         parts.append("")
         if deals:
             parts.append(f"Deals at or below ${route.target_price}:")
-            parts.append(
-                _table(
-                    ["Dates", "Pattern", "Airport", "Lowest", "Main Cabin", "Gap", "Est. LP", "Outbound"],
-                    [
-                        [
-                            _span(r),
-                            r.trip.pattern,
-                            r.trip.destination,
-                            _money(r.lowest_price),
-                            _money(r.main_cabin_price, r.gap_estimated),
-                            _money(r.gap, r.gap_estimated),
-                            f"{r.lp_estimate:,}" if r.lp_estimate else "—",
-                            f"{r.lowest.depart_time}→{r.lowest.arrive_time}",
-                        ]
-                        for r in deals
-                    ],
-                )
-            )
+            headers = ["Dates", "Pattern", "Airport", "Lowest", "Main Cabin", "Gap", "Est. LP", "Outbound"]
+            if has_ground:
+                headers[4:4] = [f"To {dest_label}", "Door-to-door"]
+            rows = []
+            for r in deals:
+                row = [
+                    _span(r),
+                    r.trip.pattern,
+                    r.trip.destination,
+                    _money(r.lowest_price),
+                    _money(r.main_cabin_price, r.gap_estimated),
+                    _money(r.gap, r.gap_estimated),
+                    f"{r.lp_estimate:,}" if r.lp_estimate else "—",
+                    f"{r.lowest.depart_time}→{r.lowest.arrive_time}",
+                ]
+                if has_ground:
+                    ground = f"{r.ground_minutes}m, ${r.ground_cost} each way" if r.ground_cost is not None else "—"
+                    row[4:4] = [ground, _money(r.door_to_door)]
+                rows.append(row)
+            parts.append(_table(headers, rows))
         else:
             cheapest = min(route_results, key=lambda r: r.lowest_price)
             parts.append(
@@ -94,8 +100,34 @@ def render_text(results: list[TripResult], config: Config, provider_name: str, t
                 row.append(f"{_money(b.lowest_price)} {b.trip.destination}{' *' if b.is_deal else ''}" if b else "—")
             rows.append(row)
         parts.append("")
-        parts.append("Cheapest AA nonstop by weekend (Saturday shown; * = deal):")
+        if has_ground:
+            parts.append(
+                f"Best AA nonstop by weekend — airport with the lowest fare + ground cost to {dest_label}; "
+                "fare shown (Saturday shown; * = deal):"
+            )
+        else:
+            parts.append("Cheapest AA nonstop by weekend (Saturday shown; * = deal):")
         parts.append(_table(["Weekend", *patterns], rows))
+
+        # Airport comparison: typical fare vs typical door-to-door
+        if len(route.destinations) > 1:
+            lines = []
+            for code in route.destinations:
+                fares = sorted(r.lowest_price for r in route_results if r.trip.destination == code)
+                if not fares:
+                    continue
+                median_fare = fares[len(fares) // 2]
+                g = route.ground_for(code)
+                if g:
+                    lines.append(
+                        f"  {code}: median fare ${median_fare} + ${2 * g.cost} ground "
+                        f"= ${median_fare + 2 * g.cost} door-to-door, {g.minutes} min each way"
+                    )
+                else:
+                    lines.append(f"  {code}: median fare ${median_fare}")
+            parts.append("")
+            parts.append("Airports compared:" if not has_ground else f"Airports compared (to {dest_label}):")
+            parts.extend(lines)
 
         # 3. Main Cabin gap summary
         gaps = [r.gap for r in route_results if r.gap is not None and not r.gap_estimated]
@@ -121,6 +153,7 @@ def render_text(results: list[TripResult], config: Config, provider_name: str, t
 FIELDS = [
     "route", "pattern", "weekend", "depart", "return", "airport",
     "lowest_price", "main_cabin_price", "gap", "gap_estimated", "lp_estimate", "is_deal",
+    "ground_minutes", "ground_cost", "door_to_door",
     "outbound_depart", "outbound_arrive", "error",
 ]
 
@@ -143,6 +176,9 @@ def to_rows(results: list[TripResult]) -> list[dict]:
                 "gap_estimated": r.gap_estimated,
                 "lp_estimate": r.lp_estimate,
                 "is_deal": r.is_deal,
+                "ground_minutes": r.ground_minutes,
+                "ground_cost": r.ground_cost,
+                "door_to_door": r.door_to_door,
                 "outbound_depart": r.lowest.depart_time if r.lowest else None,
                 "outbound_arrive": r.lowest.arrive_time if r.lowest else None,
                 "error": r.error,

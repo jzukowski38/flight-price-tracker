@@ -90,3 +90,28 @@ def test_fast_flights_query_sets_filters():
         ("2027-03-15", "LGA", "DFW"),
     ]
     assert all(list(d.airlines) == ["AA"] and d.max_stops == 0 for d in info.data)
+
+
+def test_door_to_door_picks_cheaper_airport_after_ground_costs():
+    raw = {**RAW, "routes": [{**RAW["routes"][0], "ground_to": "West Village",
+                              "ground": {"LGA": {"minutes": 35, "cost": 55}, "EWR": {"minutes": 50, "cost": 90}}}]}
+    config = parse_config(raw)
+    lga = Trip("NYC", "Thu-Mon", "DFW", "LGA", date(2027, 3, 13), date(2027, 3, 11), date(2027, 3, 15))
+    ewr = Trip("NYC", "Thu-Mon", "DFW", "EWR", date(2027, 3, 13), date(2027, 3, 11), date(2027, 3, 15))
+    r_lga = price_trip(lga, FakeProvider(lowest=[300], main=[360]), config)  # 300 + 110 = 410
+    r_ewr = price_trip(ewr, FakeProvider(lowest=[260], main=[320]), config)  # 260 + 180 = 440
+    assert (r_lga.door_to_door, r_ewr.door_to_door) == (410, 440)
+    best = best_per_weekend_pattern([r_lga, r_ewr])
+    assert best[("NYC", date(2027, 3, 13), "Thu-Mon")].trip.destination == "LGA"
+    text = render_text([r_lga, r_ewr], config, "fake", date(2027, 1, 4))
+    assert "To West Village" in text and "door-to-door" in text
+
+
+def test_ground_airport_must_be_a_destination():
+    import pytest
+
+    from fare_finder.config import ConfigError
+
+    raw = {**RAW, "routes": [{**RAW["routes"][0], "ground": {"BOS": {"minutes": 10, "cost": 5}}}]}
+    with pytest.raises(ConfigError):
+        parse_config(raw)

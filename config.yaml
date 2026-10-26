@@ -24,6 +24,16 @@ routes:
     destinations: [LGA, JFK, EWR]
     target_price: 260          # alert when a round-trip AA nonstop is at or below this (USD)
     blackout_dates: []         # departure dates to skip, e.g. ["2027-02-12"]
+    # Getting from each airport to where you're staying, ONE WAY. Rough
+    # rideshare/taxi estimates to the West Village outside rush hour — edit to
+    # match how you actually travel (transit is cheaper but slower).
+    # Door-to-door cost = fare + 2 x cost; the weekend grid picks the airport
+    # with the lowest door-to-door cost.
+    ground_to: West Village
+    ground:
+      LGA: {minutes: 35, cost: 55}
+      JFK: {minutes: 60, cost: 90}
+      EWR: {minutes: 50, cost: 90}
 
 # Loyalty Points estimate for a Main Cabin ticket:
 #   (Main Cabin price - taxes) x lp_per_dollar
