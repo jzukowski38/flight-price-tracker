@@ -46,9 +46,10 @@ class Route:
 
     @property
     def target_label(self) -> str:
-        label = f"${self.target_price}"
+        # Targets are inclusive ($299 means $299 or less), so show them as "under $300".
+        label = f"fare under ${self.target_price + 1}"
         if self.main_cabin_target:
-            label += f" (any fare) or ${self.main_cabin_target} (Main Cabin)"
+            label += f" or Main Cabin under ${self.main_cabin_target + 1}"
         return label
 
     def ground_for(self, airport: str) -> Ground | None:
@@ -74,6 +75,8 @@ class Config:
     routes: tuple[Route, ...]
     loyalty: LoyaltyConfig = field(default_factory=LoyaltyConfig)
     drop_percent: float = 15
+    drop_max_price: int = 0  # 0 = alert on any drop
+    dashboard_url: str | None = None
 
     def route(self, name: str) -> Route:
         for r in self.routes:
@@ -154,6 +157,8 @@ def parse_config(raw: dict) -> Config:
         routes=tuple(routes),
         loyalty=loyalty,
         drop_percent=float((raw.get("alerts") or {}).get("drop_percent", 15)),
+        drop_max_price=int((raw.get("alerts") or {}).get("drop_max_price", 0)),
+        dashboard_url=(raw.get("alerts") or {}).get("dashboard_url"),
     )
 
 

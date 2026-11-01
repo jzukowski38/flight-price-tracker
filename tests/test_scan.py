@@ -154,4 +154,4 @@ def test_main_cabin_target_makes_a_deal_only_when_measured():
     assert (r.deal_basic, r.deal_main) == (True, False)
     r = price_trip(TRIP, FakeProvider(lowest=[320], main=[]), config)  # unknown Main Cabin: never a Main deal
     assert r.main_cabin_unknown and not r.is_deal
-    assert config.routes[0].target_label == "$299 (any fare) or $399 (Main Cabin)"
+    assert config.routes[0].target_label == "fare under $300 or Main Cabin under $400"

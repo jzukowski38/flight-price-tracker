@@ -43,4 +43,6 @@ loyalty:
   taxes_estimate: 45           # domestic round-trip taxes and fees (USD), approximate
 
 alerts:
-  drop_percent: 15             # also flag fares that fell this much since the last run (phase 2)
+  drop_percent: 15             # also email fares that fell this much since the last scan...
+  drop_max_price: 399          # ...but only if the new fare is at or below this (0 = any price)
+  dashboard_url: https://claude.ai/artifact/5CLCMuQPh874gdFMXjpa7U

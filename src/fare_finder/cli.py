@@ -71,7 +71,7 @@ def finish(
     emailed = False
     if alerts and email_mode == "print":
         msg = build_email(alerts, config, run_url)
-        _log(f"\n--- Email preview ({len(alerts)} alerts) ---\nSubject: {msg['Subject']}\n\n{msg.get_content()}")
+        _log(f"\n--- Email preview ({len(alerts)} alerts) ---\nSubject: {msg['Subject']}\n\n{msg.get_body(("plain",)).get_content()}")
     elif alerts and email_mode == "send":
         try:
             to = send_email(build_email(alerts, config, run_url))

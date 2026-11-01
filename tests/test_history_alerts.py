@@ -57,10 +57,26 @@ def test_drop_alert_needs_15_percent():
 def test_email_lists_deals_then_drops():
     alerts = choose_alerts([result(285, trip(18), prev=340), result(249, trip(11))], CONFIG, [])
     msg = build_email(alerts, CONFIG, "https://github.com/x/y/actions/runs/1")
-    assert msg["Subject"].startswith("AA fare alert: $249 Thu-Mon Mar 11 into LGA (+1 more)")
-    body = msg.get_content()
-    assert body.index("At or below your target") < body.index("Dropped 15%+")
-    assert "was $340 last scan (-16%)" in body and "actions/runs/1" in body
+    assert msg["Subject"] == "AA fare alert: $249 Thu Mar 11–15 into LGA (+1 more)"
+    text = msg.get_body(("plain",)).get_content()
+    assert text.index("Deals: fare under") < text.index("Dropped 15% or more")
+    assert "down $55 from $340" in text and "actions/runs/1" in text
+    html = msg.get_body(("html",)).get_content()
+    assert "<table" in html and "$249" in html and "down $55 from $340" in html
+
+
+def test_drop_alerts_skip_fares_still_above_the_cap():
+    capped = parse_config({**RAW, "alerts": {"drop_percent": 15, "drop_max_price": 399}})
+    expensive = result(568, trip(18), prev=691)   # -18%, but still $568
+    cheap = result(390, trip(11), prev=569)       # -31% and under the cap
+    assert [a.result.lowest_price for a in choose_alerts([expensive, cheap], capped, [])] == [390]
+
+
+def test_email_links_dashboard_when_configured():
+    cfg = parse_config({**RAW, "alerts": {"dashboard_url": "https://claude.ai/artifact/abc"}})
+    msg = build_email(choose_alerts([result(249)], cfg, []), cfg)
+    assert "https://claude.ai/artifact/abc" in msg.get_body(("html",)).get_content()
+    assert "Dashboard: https://claude.ai/artifact/abc" in msg.get_body(("plain",)).get_content()
 
 
 def test_finish_saves_history_and_only_logs_alerts_that_were_emailed(monkeypatch):
@@ -90,4 +106,4 @@ def test_finish_survives_storage_outage(monkeypatch):
             raise StorageError("HTTP 503")
 
     text, alerts = finish([result(249)], CONFIG, "fast-flights", date(2027, 1, 4), DownStore(), "off")
-    assert "Deals at or below $260" in text and len(alerts) == 1
+    assert "Deals (fare under $261)" in text and len(alerts) == 1

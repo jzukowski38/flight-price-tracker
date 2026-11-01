@@ -39,7 +39,7 @@ Prices come from Google Flights and usually match aa.com within a few dollars. A
 
 ## Price history and email alerts
 
-Every live run is saved to Supabase (`fare_observations`), so each fare is compared with earlier scans of the same trip ("was $340, −16%"). You get an email when a fare becomes a deal or drops 15%+ since the last scan; the same trip is only emailed again if it gets at least $10 cheaper.
+Every live run is saved to Supabase (`fare_observations`), so each fare is compared with earlier scans of the same trip ("was $340, −16%"). You get an email (a table of trips) when a fare becomes a deal, or drops 15%+ since the last scan and is now $399 or less (`alerts.drop_max_price`). The same trip is only emailed again if it gets at least $10 cheaper. The [NYC Weekend Fares dashboard](https://claude.ai/artifact/5CLCMuQPh874gdFMXjpa7U) reads the same history live from Supabase.
 
 Both are switched on by repository secrets (Settings → Secrets and variables → Actions):
 
